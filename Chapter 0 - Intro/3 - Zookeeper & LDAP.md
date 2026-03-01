@@ -63,6 +63,17 @@ This session focuses on the components that provide coordination and authenticat
 
 5. **Operational Concerns:**  Outline how to deploy an ensemble, handle scaling, manage snapshots and transaction logs, and troubleshoot typical issues (e.g., split‑brain, latency).
 
+   בשביל לבנות ensemble, נבחר במספר אי-זוגי של שרתים (מומלץ אי זוגי בשביל הקונצנזוס).
+   ההגדרות הן בzoo.cfg ושם נגדיר גם מי השרת מאסטר וניתן שמות לשאר (נגדיר IP ועוד פרטים).
+   צריך לתת לכל שרת מספר מזהה מיוחד ואז לאתחל את העצים של כל אחד.
+   ניהול מהסוג הזה של השרתים מונע את בעיית הsplit brain, בעיה בה השרתים ברשת מתפצלים ל2 קבוצות שאינן מתקשרות ואז לא מעדכנים אחד את השני בעדכונים. בzookeeper יש querom, כלל של רוב שחייב להיות התלוי בגודל השרתים הכולל, Q=N/2 +1 אז אם נגיד יש 5 שרתים והם התפצלו לקבוצה של 3 ו2, הזוג שרתים לא יוכלו לתפקד כי הם לא עומדים בדרישה הזאת, ורק ה3 יבצעו פעולות כתיבה. 
+   אפשר להוסיף עוד שרתים שאינם מאסטר, זה נקרא scaling, אנחנו יכולים להוסיף שרתי followers שיעזרו בקריאת בקשות ושמירת נתונים , או observers שגם עוזרים בקריאת בקשות אבל אינם "חלק" כלומר הם לא בוחרים מאסטר חדש בבחירות ולא יכולים להיבחר, וגם אין להם שום חלק בכתיבה.
+   על כל כתיבה שנעשתה בעץ, השרת פותח transaction log, תיעוד של השינוי שנעשה. אחריי כמות מוגדרת מראש של transaction logs אנחנו יוצרים snapshot , השרת מתעד את כל העץ כמו שהוא ושומר אותו לוקלית כדי להימנע מאיבוד מידע במקרה של קריסה.
+   בגלל שרק שרת אחד אחראי על פעולת כתיבה וצריך לחכות לאישור של כל השרתים האחרים, יכול להיות latency גבוה מאוד, בגלל זה צריך למצוא איזון בין מספר השרתים followers לבין כמות הבקשות והמידע, כדי שיהיה יעיל אבל לא יכביד מדיי עד כדי שהפעולות לוקחות מלא זמן.
+    
+   
+   
+
 ### Kerberos – five guiding questions
 1. **Protocol Flow:**  Walk through the Kerberos authentication flow from initial login (kinit) to obtaining service tickets.  Include AS, TGS, and ticket caches.
 
@@ -169,6 +180,11 @@ This session focuses on the components that provide coordination and authenticat
 לאחר מכן צריך לערוך את ההגדרות ברירות מחדל וליצור סיסמה לroot user וליצור קובץ rootpw.file.
 את השרת צריך לקנפג עם תעודת CA, מפתח פרטי ותעודה חתומה של השרת, ובצד הלקוח יש להוסיף את התעודת CA של השרת לרשימת המסמכים שסומכים עליהם. 
 ככה הלקוח יסמוך ויקבל את הCA של השרת ויוכלו להתחיל בתקשורת מוצפנת בTLS.
+כשנרצה לשנות מידע, הלקוח (מוסמך בלבד) ישלח בקשה לשרת, והשרת ישלח את התשובה ללקוח וישכפל את השינויים לכל השרתים.
+אם השרתים ביחסי master-slave אז שרת המאסטר יפיץ את העדכון, אם הם ביחסי master-master אז הם יכולים להתעדכן אחד מהשני על השינויים.
+לפעמים נחפש מידע מהשרת הלא נכון, והוא יפנה אותנו לשרת אחר שבו המידע נמצא.
+אם הDNS לא מוגדר טוב יכול להיווצר לופ מעגלי. כדי למנוע אותו, נגדיר מספר מקסימלי של הפניות שניתן לעשות ונבדוק מעגלים.
+
 
 ## Wrapping Up :trophy:
 Review your answers with your mentor and discuss any unclear points.  Relate each concept back to actual deployments you might encounter.

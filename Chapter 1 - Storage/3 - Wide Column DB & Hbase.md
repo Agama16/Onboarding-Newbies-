@@ -89,7 +89,7 @@ Answer these five questions to cover HBase’s major areas:
 כל regionserver אחראי לטפל בבקשות קריאה\כתיבה.
 הHBASE הוא לא רלציוני ואי אפשר לעשות עליו פעולות SQL רלציוניות בשונה מMYSQL וכו... הוא נותן לנו גישה מהירה לכמויות עצומות של מידע שנפרשות על איזורים שונים.
 המבנה שלו עם הrow keys מאפשר random access לנתונים (מה שאין בHDFS נגיד) כדי לאפשר גישה מהירה יותר ועבודה מהירה עם כמויות של נתונים שמתעסקים איתם בHDFS.
-כל המטא-דאטה של הregions נשמר בטבלה של hbase:meta (מוצפן בMD5) שהמיקום שלו נשמר בnode של zookeeper.
+כל המטא-דאטה של הregions נשמר בטבלה של hbase:meta שהמיקום שלו נשמר בnode של zookeeper.
 
 
 2. **Components & Storage Flow:**  Explain the roles of RegionServers, MemStore, HFiles, block cache, and the Write-Ahead Log (WAL). How does data flow from a client write to durable storage, and how are reads served from memory and disk structures?
@@ -143,7 +143,7 @@ Answer these five questions to cover HBase’s major areas:
 
 4. **Fault Tolerance & Coordination:**  How does HBase use WAL replay, region reassignment, and coordination via Apache ZooKeeper to handle failures and maintain availability? What happens when a RegionServer crashes?
 
-כל הregion servers חולקים את אותו WAL שנמצא בHDFS, הWAL משמש כגיבוי למקרה שנפל הregion servver ואיתו הmemStore.
+לכל region servers יש WAL שנמצא בHDFS, הWAL משמש כגיבוי למקרה שנפל הregion servver ואיתו הmemStore.
 במקרה כזה אנחנו צריכים לשחזר את כל המידע שהיה שם, ונעשה מה שנקרא WAL replay.
 הzookeeper אחראי לשים לב כשregion server קרס, והוא מודיע לHMaster שמחלק את הregions לregion servers אחרים , ובהתאם כל הנתונים בWAL מתחלקים לregion servers אחרים שבאחריותם לשחזר את הנתונים הרלוונטים אליהם מהWAL.
 זה יקרה גם אם אחד מהregion servers עמוס מדיי, או region עמוס מדיי - יקרה פיצול ואז הregion serer צריך לבקש מהHMaster לעשות פיצול בregion, הוא יחלק את הregion לשני שרתים לפי כמות השורות.
@@ -183,7 +183,7 @@ Answer these five questions to cover HBase’s major areas:
 
 ******************************************************הערות********************************************************************
 מבנה:
-HMASTER -> אחראי על הרבה REGION SERVER -> כל אחד אחראי על הרבה REGIONS -> בכל אחד יש כמה COLUMN FAMILIES -> כל אחת מורכבת מ FILESTORE, MEMSTORE , BLOCK CACHE אישי -> FILESTORE= HFILES
+HMASTER -> אחראי על הרבה REGION SERVER ->  common block cache  -> כל אחד אחראי על הרבה REGIONS -> בכל אחד יש כמה COLUMN FAMILIES -> כל אחת מורכבת מ FILESTORE, MEMSTORE  -> FILESTORE= HFILES
 
 לכל הREGION SERVERS יש WAL משלהם אבל כל הregion חולקים את אותו WAL של הREGION SERVER.
 לוקליות:
@@ -224,16 +224,18 @@ Assignment: You are required to research and write a comparative analysis betwee
 
   השוואה - HBASE VS CASSANDRA
   גם HBASE וגם CASSANDRA שתיהן פלטפורמות לאחסון ועיבוד כמויות גדולות של מידע בעזרת דאטה בייס לא רלציוני על בסיס קוד פתוח.
-  שתיהן מאפשרות scalability, data recovery ושתיהן משתמשות באותה שיטה של wide column database.
+  שתיהן מאפשרות scalability, data recovery.
+  הHBASE משתמש בwide column database והקסנדרה משתמש ב column store ששומרת כל עמודה בנפרד בדיסק.
   אבל יש כמה דברים שונים בהתנהגות שלהם:
   - בHBASE שעובדת על HDFS הdatanodes נמצאים במערכת של master-slave ובcassandra הם מתקשרים במערכת של P2P. בגלל שלקסנדרה יש P2P כלומר כל הקודקודים יכולים לעשות קריאה או כתיבה הHA של קסנדרה טובה יותר, אבל העקביות של HBASE טובה יותר כי קודקוד אחד אחראי על ביצוע רפליקות
   - האחסון טיפה שונה, בקסנדרה מאחסנים עמודות קשורות תחת Keyspaces ששונה ממה שהסברנו על HBASE
   - קסנדרה לא דורשת מערכת חיצונית כמו HDFS או zookeeper
   - לHBASE יש latency נמוך יותר מקסנדרה, והקריאה בו יותר מהירה.
   - בקסנדרה הכתיבה מהירה יותר כי אפשר לכתוב מקבילית ללוג ולcache
-  הHBASE רגיש למקרי קריסה של הHMASTER , משום שכל הפעילות תלויה בו, לעומת זאת בקסנדרה יש את הP2P וכל קודקוד יכול לענות לכל בקשה, אז הpain point הזה לא קיים.
+  הHBASE רגיש למקרי קריסה של הHMASTER (אם אין יותר מHMASTER 1), משום שכל הפעילות תלויה בו, לעומת זאת בקסנדרה יש את הP2P וכל קודקוד יכול לענות לכל בקשה, אז הpain point הזה לא קיים.
 בקסנדרה יש בעיית עקביות , בגלל שצריך לעדכן את כל הקודקודים לפעמים המידע לא יהיה מסונכרון.
-הבנייה של HBASE יותר מסובכת כי היא בנויה על zookeeper וכו.. 
+הבנייה של HBASE יותר מסובכת כי היא בנויה על zookeeper וכו..
+אחד מהחסרונות שלו הוא המסובכות של HBASE (תלות בhadoop וzookeeper, ותלות בכלים נוספים - נגיד בלי apache pheonix או כלי דומה השאילתות מאוד מוגבלות).  
 
 ### 🎯 User Story & Scenario
 Assignment: Based on your research and understanding of the department's pipeline, define a concrete Use Case for this technology.

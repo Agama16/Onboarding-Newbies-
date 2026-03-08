@@ -189,17 +189,78 @@ HMASTER -> אחראי על הרבה REGION SERVER -> כל אחד אחראי על
 לוקליות:
 חשוב שמידע יהיה לוקלי כדי שיהיה פשוט לבצע קריאה וכתיבה (שזה אחת ממטרות הHBASE) והשימוש בHDFS באמת מאפשר לשמור את הנתונים לוקלית בregion אבל אם הregion זז (קורה פיצול או משהו דומה) אז הנתונים לא יהיו לוקלים עד שנעשה דחיסה, כי בדחיסה אנחנו כותבים הכל מחדש ומכניסים לHDFS מחדש, הפעם לdataNode הלוקלי.
 
+מטא דאטה:
+טבלת המטא דאטה שומרת - (table, row key range) -> regionserver ופרטים כמו מזהה של הregion, מיקום הregionserver, ומצב הregion
+הכוונה במצה היא האם הוא בפיצול כרגע, האם הוא פועל, נפל וכו..
+הטבלה מאוחסנת כHFILE ושומרים העתקים שלה ברחבי הקלאסטר (חשוב למקרה של קריסה של השרת)
+השרת עליו הטבלת מטא יושבת שולח heartbeats לHMASTER שבמקרה שהשרת יקרוס ימנה שרת אחר שיש עליו העתק.
+בדרך כלל הלקוחות יזכרו את האיזורים וישמרו אותם אצלם במחשב כדי לא לתשאל את טבלת המטא כל פעם.
+בHBASE 2 יש חיבור ללא zookeeper, כי אפשר לתשאל את הHMASTER איפה טבלת המטא עם בקשת RPC.
+באופן דומה הassignment manager היה משתמש בzookeeper ועכשיו הוא מנהל התאמת איזור למנהל בעזרת הPV2.
+
+
+פיצול איזורים:
+עד שהפיצול הסתיים, נוצרים reference files שמצביעים להתחלה של הטבלה המקורית לגישה מהירה לקריאה (אי אפשר לעשות כתיבה).
+במהלך הפיצול נוצר קודקוד בzookeeper ותיקייה בHDFS לפיצול.
+עושים flushing לאיזור הזה, ומעדכנים את הHMASTER. אחריי הפיצול עושים דחיסה גדולה והקבצי reference נמחקים.
+אפשר לעשות פיצול נוסף רק אחריי שהקבצי reference הקודמים נמחקו והדחיסה הסתיימה.
+אפשר לעשות פיצול בכוח גם לאיזור קטן יותר בעזרת פקודה ידנית.
+אחריי הדחיסה גם הטבלה המקורית נמחקת מהמטא.
+במהלך הassignment של איזור לregionserver הוא יהיה בסטטוס opened/closed ובסטטוס הזה אי אפשר לעשות כתיבה או קריאה מהאיזור. זה RIT
+הפעולות האלו כמו פיצול ויצירת טבלה  וכו נעשות בפריימוורק בשם PV2 שמאפשר לעשות procedures.
+לכל region יש procedure store ששם שומרים את התהליכים בזמן שהם initialized/waiting, זה נשמר על הHMASTER.
+את תקינות הregions מוודאים עם כלי בשם hbck שבודק את שלמות הטבלאות ומתקן תקלות, יש לו מוד של קריאה בלבד ומוד של קריאה וכתיבה.
+הHBCK 1 היה משנה ישירות את הHDFS אבל HBCK 2 מורה לHMASTER לעשות שינויים דרך הPV2.
+יש בנוסף את הbalancer שדואג שאיזורים יהיו מאוזנים, גם אם לא הגענו לגודל המקסימלי (למנוע bottleneck).
+הcoprocessor מאפשר לבצע קוד לקוח בצד שרת בשביל בטיחות וכאלה.
+
+הbulk load:
+שיטה לעיבוד כמות גדולה של נתונים ,בעזרת spark או mapreduce ולהפוך אותם לHFILES.
 ### 🔄 Alternatives
 Assignment: You are required to research and write a comparative analysis between Hbase and an industry alternative.
 - Deliverable: A written summary (minimum 1 or 2 sentences).
 - Focus: Compare performance, architecture, and specific "pain points" this tool solves compared to legacy systems or competitors.
 - Goal: You must be able to justify why the department uses this tool for our specific environment.
 
+  השוואה - HBASE VS CASSANDRA
+  גם HBASE וגם CASSANDRA שתיהן פלטפורמות לאחסון ועיבוד כמויות גדולות של מידע בעזרת דאטה בייס לא רלציוני על בסיס קוד פתוח.
+  שתיהן מאפשרות scalability, data recovery ושתיהן משתמשות באותה שיטה של wide column database.
+  אבל יש כמה דברים שונים בהתנהגות שלהם:
+  - בHBASE שעובדת על HDFS הdatanodes נמצאים במערכת של master-slave ובcassandra הם מתקשרים במערכת של P2P. בגלל שלקסנדרה יש P2P כלומר כל הקודקודים יכולים לעשות קריאה או כתיבה הHA של קסנדרה טובה יותר, אבל העקביות של HBASE טובה יותר כי קודקוד אחד אחראי על ביצוע רפליקות
+  - האחסון טיפה שונה, בקסנדרה מאחסנים עמודות קשורות תחת Keyspaces ששונה ממה שהסברנו על HBASE
+  - קסנדרה לא דורשת מערכת חיצונית כמו HDFS או zookeeper
+  - לHBASE יש latency נמוך יותר מקסנדרה, והקריאה בו יותר מהירה.
+  - בקסנדרה הכתיבה מהירה יותר כי אפשר לכתוב מקבילית ללוג ולcache
+  הHBASE רגיש למקרי קריסה של הHMASTER , משום שכל הפעילות תלויה בו, לעומת זאת בקסנדרה יש את הP2P וכל קודקוד יכול לענות לכל בקשה, אז הpain point הזה לא קיים.
+בקסנדרה יש בעיית עקביות , בגלל שצריך לעדכן את כל הקודקודים לפעמים המידע לא יהיה מסונכרון.
+הבנייה של HBASE יותר מסובכת כי היא בנויה על zookeeper וכו.. 
+
 ### 🎯 User Story & Scenario
 Assignment: Based on your research and understanding of the department's pipeline, define a concrete Use Case for this technology.
 - Deliverable: A written summary example/story (two paragraphs approx.).
 - Requirement: Describe a real-world scenario (e.g., a specific client requirement) where this technology is the optimal solution.
 - Data Flow: Map out the data flow and explain how this tool integrates with other components in the Data Pipeline
+
+נראה use case לHBASE:
+מערכת של log analytics בה יש לנטר ולעקוב אחריי נתונים פיננסים כלשהם.
+זאת פעילות שמתעדכת בבאופן רציף וכוללת כמויות ענקיות של נתונים.
+רשימת הלוגים היא בעיקר לקריאה ולא לכתיבה ויש צורך בעקביות תמיד, (נתונים פיננסים חייבים תמיד להיות מדוייקים).
+השימוש בHBASE יאפשר ניטור של הנתונים וגם יתן random access לחלקים מסויימים.
+הוא גם ישמור על המערכת אמינה כי בנתונים רגישים אפילו אי עקביות אחד יכול להיות עניין גדול.
+
+נראה use case לקסנדרה:
+רשתות חברתיות, שבהן יש עדכונים מהירים והרבה כתיבות.
+במיוחד העובדה שצריך שעומס הפעולות יתחלק בין הרבה מקומות השימוש בP2P בקסנדרה עוזר.
+בנוסף חייב שתמיד יהיה HA מכל הבחינות.
+זה בסדר ברשת חברתית שיהיה עקביות בסוף התהליך ולא ישר ברגע השינוי.
+הקסנדרה תתאים פה יותר בין אם זה כמויות גדולות של כתיבה (הודעות ברשת, פוסטים, תגובות וכו) או בין אם זה בפעילות מקבילית.
+
+
+********************************* שאלות מסקילה 2 **************************************************************
+1. איך נראה row key של טבלת המטא? שילוב של שם הטבלה, הrow key של השורה הראשונה בregion והregionID.
+2. מה זה WAL splits? כשregionserver קורס כל הWAL FILES שקשורים אליו נהיים reassigned לregions specific files עד שהregions יועברו לregion server אחר.
+3. מה זה הbalancer והבדל מהnormilizer? הbalancer מעביר regions בין regionservers כדי לודא שיש איזון בכמות הregions בכל השרתים, לעומת זאת הnormalizer משנה regions בעזרת פיצול או איחוד כדי שבכל region server הregions יהיו יחסית זהים בגודל.
+   
 
 ## Wrapping Up :trophy:
 Go over your answers with your mentor and clarify any uncertainties. Relate HBase concepts back to the broader data platform.

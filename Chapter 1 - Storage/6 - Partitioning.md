@@ -30,7 +30,7 @@ Estimated Duration: 0.5 Days
 - אופקי - חלוקה לפי שורות - מתחלק לrange, list, hash, composite ועוד סוגי חלוקה.
 יש גם 2 סוגים של partition :
 - לוגי - הפרדה של הטבלה עצמה באופן לוגי כלומר בחירת שורות או עמודות והפרדה שלהם לחלקים, נועד כדי לשפר ביצועי מערכת ולהקל.
-- פיזי - ממש הפרדה של אותם חלקים לסגמנטים על הדיסק כדי לשפר גישה אליהם מבחינה פיזית.
+- פיזי - ממש הפרדה של אותם חלקים ושמירה נפרדת שלהם באחסון, כלומר אין טבלה אחת גדולה שומרים רק פרטישנים שלה.
  
 
 2. **Strategies:** Describe common partitioning techniques (range, list, hash, composite) and when each is appropriate. Include considerations for time-series data.
@@ -58,7 +58,10 @@ Estimated Duration: 0.5 Days
 
 5. **Bucketing & Data Layout:** What is bucketing, and how does it differ from partitioning? When is bucketing useful (e.g., joins, load balancing, reducing shuffle)? How can bucketing complement partitioning in large datasets?
 
-הbucketing זה החלוקה של הנתונים בתוך הפרטישנים עצמם לbuckets, בניגוד לpartitioning לא מחלקים את הטבלה לפי ערכים או טווח אלא מחלקים את הפרטישן עצמו לפי שורה או עמודה ויש מספר מוגבל של Buckets.
+הbucketing זה החלוקה של הנתונים בתוך הפרטישנים עצמם לbuckets, בניגוד לpartitioning לא מחלקים את הטבלה לפי ערכים או טווח אלא מחלקים את הפרטישן עצמו לפי שורה או עמודה ובניגוד לpartitioning יש מספר מוגבל של Buckets שקובעים מראש, זה לא משהו דינאמי שנקבע לפי טווח וגדל עוד.
+הבאקטינג שונה מפרטישנינג כי הוא בעצם תהליך בתוך הפרטישנינג, בתוך כל פרטישן מגדירים מספר קבוע מראש של buckets ומחלקים את הנתונים לאותם באקטס, כל קבוצת נתונים ישמרו באותו קובץ.
+בניגוד לpartitioning שנועד כדי להפחית עומסים ולייעל פעולות קריאה, הבאקטינג נועד להקל על JOINS, ליצור איזון בשמירת הנתונים ולהפחית skewness (הסתברות לא סימטרית/ לא מאוזנת) כי הוא מונע hot spots.
+הbucketing הוא תנאי הכרחי לתמיכה בACID שלא כמו פרטישנינג.
 זה יוצר קבצים מאוזנים והרבה פעמים נעשה בעזרת hash.
 במה זה עוזר?
 - בJOIN במקום לסרוק כל שורה אפשר פשוט לעשות JOIN לbuckets זהים.

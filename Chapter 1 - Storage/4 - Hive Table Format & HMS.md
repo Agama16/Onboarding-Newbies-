@@ -29,7 +29,7 @@ Answer the following questions to explore the metastore:
 
 הapache hive הוא data warehouse שבנוי על האדופ במטרה לתת כלי לשאילתות ולניתוח בצורה דומת SQL למידע שמאוחסן בדאטה בייסים שונים (HQL).
 הmetastore זה כלי שמאחסן את כל המטא דאטה של Hive שנחלקת בין כלים שונים כמו spark, trino...
-הmetastore מורכבת מהדאטה בייס (דאטה בייס רלציוני כמו postgreSQL / oracle / mySQL) שמאחסן בפועל את המטא דאטה, מהhive tables שמאחסנים רפרנסים לקבצים שבHDFS בפורמט טבלאי ומהhive server שמאפשר תקשורת מול הלקוח. 
+הapache hive מחולק לכמה חלקים -  הmetastore שמורכבת מהדאטה בייס (דאטה בייס רלציוני כמו postgreSQL / oracle / mySQL) שמאחסן בפועל את המטא דאטה, הhive tables שמאחסנים רפרנסים לקבצים שבHDFS בפורמט טבלאי ומהמנוע עיבוד שמכיל את  הhive server שמאפשר תקשורת מול הלקוח. 
 הmetastore שומר מיקומי טבלאות, שמות טבלאות, שמות עמודות, partitions ועוד..
 לכל metastore יש דאטה בייס אחד המורכב מכמה טבלאות, השימוש בדאטה בייס אחד מאפשר אמת אחת מוסכמת לכל הכלים שניגשים למטא דאטה, ומהווה מקור אחד לחיפוש מיקומים כך שאין צורך בעוד טבלאות מעליו.
 
@@ -59,8 +59,8 @@ Answer the following questions to explore the metastore:
 4. **Extensibility & Clients:**  How do external engines such as Apache Spark, Trino, and other tools interact with the metastore? What APIs and protocols are used?
 
 איך apache/trino מתקשרים עם hive?
-הם פונים לconnector שלהם או ישירות לmetastore (בדרך כלל טרינו ישירות וספארק או ישירות או בעזרת JDBC).
-אם הפנייה היא ישירות אז היא לא עוברת דרך hiveserver2 אלא רק דרך הthrift api and protocol , הAPI מתרגם בקשת SQL לRPC והפרוטוקול שולח אותה לmetastore.
+הם פונים לconnector שלהם או ישירות לmetastore (בדרך כלל טרינו ישירות וספארק ישירות).
+אם הפנייה היא ישירות אז היא לא עוברת דרך hiveserver2 אלא רק דרך הthrift api and protocol , הhive server מתרגם בקשת SQL לRPC והפרוטוקול thrift מקודד אותה ושולח אותה לmetastore.
 הmetastore יפנה לדאטה בייס ויחפש את המידע הנדרש אותו הוא יחזיר גם בבקשת RPC.
 בעת גישה דרך HS2 אז נשלח שם משתמש וסיסמה בדרך כלל והHS2 מבצע גם אותנטיקציה, הJDBC ימיר את הבקשה לRPC וישתמש בפרוטוקול thrift.
 הHS2 הוא זה שיעדכן את הmetastore.
@@ -87,15 +87,15 @@ Answer the following questions to understand table formats:
 
 הכוונה בhive table format היא סידור הקבצים מHDFS לפולדרים לפי partitions בצורה היררכית לפי מבנה מסויים.
 זה מהווה מין מבנה פיזי למידע שקובע איך זה מסודר ממש על הדיסק בניגוד למטא סטור שרק מאחסן את המטא דאטה של הכל ולא בהכרח בשום מבנה היררכי.
-הטבלאות של Hive formats ממופות על ידי הORM והתיקיות שלהן נשמרות בהיררכיה בפורמט הזה, הpartitions של הסכמות הלוגיות בפועל יהווה חלוקה בדיסק הפיזי.
+הטבלאות של Hive formats ממופות והתיקיות שלהן נשמרות בהיררכיה בפורמט הזה, הpartitions של הסכמות הלוגיות בפועל יהווה חלוקה בדיסק הפיזי.
 
 2. **Common Formats:**  Describe popular formats such as Text/CSV, Parquet, ORC, Avro. How do they differ in encoding, compression, columnar storage, and query performance?
 
 פורמטים:
-- הCSV - שומר מספרים וטקסט כשכל ערך מופרד בפסיק,משומש לשמירת מידע טבלאי.
-- הORC - שמירה בעמודות וחלוקת המידע לקבצים של עד 64MD, שליפות מהירות וקל מאוד לדחיסה, ניתן לקרוא עמודה אחד ואין צורך לעבור על כולן בשביל נתון מסויים (מה שלא רלוונטי אפשר לדלג).
-- הparquet - שמירה בעמודות , מהיר לניתוח, מפריד מטא דאטה מהנתונים, קל לדחיסה.
-- הavro - שמירה בשורות, במבנה של JSON והנתונים בפועל נשמרים בפורמט בינארי מה שמקטין את הקובץ.
+- הCSV - שומר מספרים וטקסט כשכל ערך מופרד בפסיק,משומש לשמירת מידע טבלאי. נשתמש כשנרצה מידע לא מקודד כי אנשים צריכים להבין את הקבצים.
+- הORC - שמירה בעמודות וחלוקת המידע לקבצים של עד 64MD, שליפות מהירות וקל מאוד לדחיסה, ניתן לקרוא עמודה אחד ואין צורך לעבור על כולן בשביל נתון מסויים (מה שלא רלוונטי אפשר לדלג), נשתמש בו כשיש צורך בACID והרבה פעולות קריאה כי הוא יודע להתמודד איתם טוב מאוד בעזרת הIndexing.
+- הparquet - שמירה בעמודות , מהיר לניתוח, מפריד מטא דאטה מהנתונים, קל לדחיסה. נשתמש כשיש צורך בגישה להרבה פלטפורמות (קבצי parquet ידועים בכך שהם נגישים לפלטפורמות שונות, הם לא צריכים לעשות המרה כדי לקרוא ולכתוב אליהם), הם מעולים לפעולות אנליטיקה.
+- הavro - שמירה בשורות, במבנה של JSON והנתונים בפועל נשמרים בפורמט בינארי מה שמקטין את הקובץ, נשתמש אם יש עומס בפעולות כתיבה או לסטרימינג נגיד כי הכתיבה בשורות גורמת לכך שאין אוברהד כמו בשאר הפורמטים.
 
 3. **Schema & Tables:**  Explain the difference between managed and external tables, including ownership, lifecycle, and storage location semantics. How does the metastore map logical tables to physical data in storage systems like HDFS or object storage?
 
@@ -129,7 +129,7 @@ Assignment: You are required to research and write a comparative analysis betwee
 - Focus: Compare performance, architecture, and specific "pain points" this tool solves compared to legacy systems or competitors.
 - Goal: You must be able to justify why the department uses this tool for our specific environment.
 
-  אלטרנטיבות לmetastore וhive table format - הAWS glue data , הוא גם מאחסן מטא דאטה באותה צורה שמטא סטור מאחסנת רק שהוא cloud based וגם serverless כלומר בניגוד למטא סטור אנחנו לא צריכים "לתחזק" אותו, אין צורך לעשות קינפוג או scaling או בכללי שום דבר שקשור לניהול השרתים שלו. אופציה נוספת היא iceberg שבכללי הביצועים שלה הרבה יותר טובים מhive, שליפות מהירות יותר ומטפל במקביליות של לקוחות יותר טוב.
+  אלטרנטיבות לmetastore וhive table format - הAWS glue data , הוא גם מאחסן מטא דאטה באותה צורה שמטא סטור מאחסנת רק שהוא cloud based וגם serverless כלומר בניגוד למטא סטור אנחנו לא צריכים "לתחזק" אותו, אין צורך לעשות קינפוג או scaling או בכללי שום דבר שקשור לניהול השרתים שלו. אופציה נוספת היא databricks unity catalog שבכללי הביצועים שלה הרבה יותר טובים מhive, שליפות מהירות יותר ומטפל במקביליות של לקוחות יותר טוב, היא לא per-workspace אלא multi-cloud cross-workspace.
   במה מטא סטור יותר טוב מaws glue ? זה לא עולה כסף :)
 
 
@@ -149,7 +149,7 @@ Assignment: Based on your research and understanding of the department's pipelin
 7. מהם metastore locks? יש dbLockManager שמאחסן מידע על המנעול במטא סטור בטבלה בשם HIVE_LOCKS שמים מנעול על טבלה בעת שמעדכנים או מוחקים בה נתונים וברגע שמסיימים משחררים את המנעול.
 8. מה זה MSCK repair? פקודה שמסנכרת את המטא סטור עם הHDFS/S3 ממש . יכול גם לעדכן וגם למחוק מהמטא דאטה נתונים שהתשתנו (בגרסאות קודמות לא היה אפשר למחוק) ואפשר לעשות זאת אוטומאטית אם מוסיפים אותו לETL pipeline.
 9. לבדוק לגבי שורה עם אובייקט בtable? אפשר לאחסן גם array/map/struct.
-10. מתי עדכון יופיע בשליפה? מיד אחריי העדכון כי בשליפה עושים read אז המטא דאטה יתעדכן אלא אם עדכנו רק Partition מסויים ואז זה יופיע רק כשהinsert בוצע בהצלחה.
+10. מתי עדכון יופיע בשליפה? אם מדובר בהוספת קבצים לHDFS אז השינויים לא יושמו עד שיעשו MSCK REPAIR, אם השינוי הוא דרך hive אז הmetastore יתעדכן.
 11.  אפשר להגביל partitions? כן.
 12.  שני טבלאות hive יכולות להצביע על אותו נתיב? כן בטבלאות EXTERNAL.
 13.  איפה הcaching נשמר? יכול להיות גם על צד לקוח (JVM) וגם על צד שרת (HMS) 

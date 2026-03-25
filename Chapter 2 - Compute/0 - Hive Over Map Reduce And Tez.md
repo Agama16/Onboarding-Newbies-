@@ -116,6 +116,7 @@ Assignment: Briefly research another distributed processing framework used for l
 - Add a simple real-life use case.
 - Focus: What problem does this framework solve compared to MapReduce or Tez?
 
+אלטרנטיבה נפוצה לmap reduce/tez היא ספארק שזה גם מנוע לעיבוד וביצוע שאילתות SQL שבניגוד לmap refuce / tez במקום לעשות שמירות ביניים בדיסק היא עושה אותן בזיכרון ובגלל זה גם נחשבת הכי מהירה מבין השלוש, היא טובה לstream, batch ולML . בדרך כלל מועדפת על tez וmap reduce. מציעה מתודות מתקדמות יותר לאופטימיזציה כמו column pruning והcatalyst optimizer שהוזכר. נעדיף את map reduce/tez כשלא רוצים להעמיס על הRAM כי ספארק דורשת ממנו הרבה.
 ---
 
 ### 🎯 User Story & Scenario

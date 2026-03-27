@@ -201,7 +201,7 @@ Assignment: Based on your research and understanding of the department's pipelin
 10. מה ההבדל בין שאילתה finishing / abondend ? שאילתה finishing היא שאילתה שמסתיימת (המשימות נסגרו והתשובה מוחזרת ללקוח), שאילתה abondend היא שאילתה שבה לא היה תקשורת עם הלקוח מעבר לtimeout מוגדר.
 11. איך יודעים שהאופטימיזציה עבדה בטרינו? עושים EXPLAIN ANALYZE , יראה גם את כל התכנונים הלוגים וגם את מה שבוצע בפועל בשאילתה.
 12. איך מחליפים איזה קלאסטר הוא אקטיב?
-13. למה הטרינו לא מחליף רגל אוטומאטית?
+13. למה הטרינו לא מחליף רגל אוטומאטית? טרינו לא מחליף רגל אוטומאטית כי הוא עובד לפי הresource groups ולפי החוקים וטאגים שיש על הבקשות ולכן כשקלאסטר מסומן כUNHEALTHY טרינו לא בהכרח יעביר את השאילתות לקלאסטר אחר בריא כי הסינון לא מתבצע לפי זה.
 14. מה שני סוגי הFTE ומה היתרונות וחסרונות שלהם? יש שני סוגי retry, אחת לשאילה שמריצים אותה במקרה שהייתה תקלה על worker node, מומלץ כשהשאילתות קטנות יחסית היתרון של זה זה הרצה מהירה יחסית לשאילתות קטנות אבל אם הן גדולות מדיי זה latency ובכללי לחזור על תהליך יחסית ארוך, ויש task retry שמריץ רק משימה ספציפית אחת שנכשלה, מומלץ כשיש שאילתות גדולות או עיבוד מסגנון batch היתרון הוא שהretry יהיה מהיר יותר ולא דורש את כל התהליך עם המשאבים והתעבורה מחדש, החיסרון הוא שאם השאילתות קטנות ועושים הרבה retry task זה יכול לגרום לhigh latency שיקח יותר זמן מהרצת כל השאילתה.
 ## Wrapping Up :trophy:
 Go over your answers with your mentor and clarify any uncertainties. Relate Trino concepts back to the broader data platform and how distributed query engines interact with storage systems and processing frameworks.

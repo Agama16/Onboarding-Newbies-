@@ -50,9 +50,9 @@ Answer these questions to cover Trino’s major architectural and operational co
    What is Trino, and where does it sit in the data architecture? Explain its role as a distributed MPP SQL engine, how it differs from storage systems, and when it should be used instead of other query engines.
 
 טרינו הוא מנוע לעיבוד שאילתות שנוצר בשביל לתת מענה לאיטיות של hive, הוא פותח במטרה לתת יכולת לבצע שאילתות מהירות (במילישניות) על כמויות גדולות של נתונים ובאופן מבוזר.
-הוא מהווה כשכבה נפרדת מעל האחסון, סוג של קומפיילר, הוא לא מאחסן את הנתונים בעצמו אלא מקבל את השאילתה, מריץ אותה ומחזיר תשובה בעזרת שכבת המטא דאטה הנפרדת ושכבת האחסון הנפרדת.
+הוא מהווה כשכבה נפרדת מעל האחסון, סוג של קומפיילר שגם מתרגם מתזמן ומעבד, הוא לא מאחסן את הנתונים בעצמו אלא מקבל את השאילתה, מריץ אותה ומחזיר תשובה בעזרת שכבת המטא דאטה הנפרדת ושכבת האחסון הנפרדת.
 טרינו תומך בכתיבות בזיכרון ולא לדיסק ובגלל זה הוא משמעותית יותר מהיר ממנועים אחרים כמו הייב, נוסף על כך הוא מנוע MPP, כלומר הוא תומך בהרצת משימות במקביל כדי ליעל תהליכים.
-טרינו מאפשר להשתמש בכמה אחסונים במקביל ולהריץ שאילתה על כולם במקביל, ולכן מהיר משמעותית משאר המנועים.
+טרינו מאפשר להשתמש בכמה אחסונים במקביל ולהריץ שאילתה על כולם במקביל, דבר שלא אפשרי בהרבה מנועים אחרים כמו הייב.
 
 2. **Architecture & Query Execution:**  
    How is Trino architected, and how does it execute queries in a distributed environment? Discuss the roles of the Coordinator and Workers, stages and tasks, data exchanges, and the execution model.
@@ -62,34 +62,35 @@ Answer these questions to cover Trino’s major architectural and operational co
 - הworkers : שרתים שמריצים taskים. כל תוצאת ביניים הם מעבירים אחד לשני וכותבים לזיכרון.
 - הקטלוג : ממנו לוקחים את המטא-דאטה כדי לדעת איפה הנתונים שצריך
 - הקונקטור : מה שמחבר אותנו לקטלוג, פונה למטא דאטה ולנתונים
-- הדרייבר : חיבור ללקוח, JDBC לדוגמה, זה לא חובה אפשר גם לפנות ב trino CLI / python client / node.js client ועוד.
-- הקלאסטר : בנוי מקורדינטור אחד ועובדים, עליו שאילתה תפוזר.
+- הדרייבר : חיבור ללקוח, JDBC לדוגמה, זה לא חובה אפשר גם לפנות ב trino CLI / python client / node.js client ועוד שמתשתמשים בספריות ובREST API.
+- הקלאסטר : בנוי מקורדינטור אחד ועובדים, עליו שאילתה תפוזר. יש גם אפשרות לsingle node בו קודקוד אחד הוא גם הקורדינטור וגם הworkers.
 השאילתה בנויה כך:
 - הstatement : השאילתה ממש מאיך שהיא ניתנה.
 - הquery : שאילתה אחריי פירוק לעץ AST לפי פעולות עיקריות.
 - הstage : פירוק משימה עיקרית לשלבים. רצף של taskים שצריך לעשות.
 - הtask : משימות נפרדות, מפורטות יותר.
 - הsplits : פירוק המשימות לnodes שונים לפי הדאטה שעליהם.
-- דרייבר : הworkers מתקשרים בעזרת דרייבר שמעביר ביניהם מידע ביניים.
-- אופרטור : פעולות בסיסיות, עושה consuming/ producing על התוצאות.
+- דרייבר : הtaskים "צוברים" ביניהם את המידע בעזרת הדרייברים שמכילים סט של אופרטורים.
+- אופרטור : סט אופרטורים של פעולות בסיסיות, עושה consuming/ producing על התוצאות, כלומר JOIN, COUNT וכו...
 
 3. **Connectors & Catalogs:**  
    How does Trino integrate with external systems through connectors and catalogs? Explain what connectors are responsible for, how catalogs are configured, and how Trino can federate queries across multiple data sources.
 
 לטרינו יש אינטגרציה מצויינת עם מערכות חיוניות בעזרת קונקטורים וקטלוגים.
 בקטלוג מדובר על כל קטלוג שאנחנו מכירים (לא כולם אבל הרבה) iceberg, hive וכו.. או קטלוג מותאם אישית.
-הקונקטורים הם מה שמחבר את הmanager של טרינו לקטלוג עצמו, הוא מוגדר כproperty בקטלוג ודרכו מועבר כל המטא דאטה שצריך מהקטלוג.
-קטלוג מוגדר בתיקיית /etc/catalog/ כנגיד /etc/catalog/hive.properties/ .
+הקונקטורים הם מה שמחבר את הmanager של טרינו לקטלוג עצמו, הוא מוגדר כproperty בקטלוג ודרכו מועבר כל המטא דאטה שצריך מהקטלוג (או מהמיקום שבקטלוג), אבל בכולם הקטלוג מנטב למאיפה לוקחים את המטא דאטה (ומשם את הדאטה) הנדרש.
+קטלוג מוגדר בתיקיית /etc/catalog/ כנגיד /etc/catalog/hive.properties/ בדיפולט (אפשר לשנות את זה בקובץ config.properties ) .
 בגלל שטרינו יכול לעבוד על כמה סוגי אחסון במקביל, הוא יכול לנהל כמה קטלוגים במקביל, ולכל קטלוג קונקטור משלו.
 שאילתה אחת יכולה לרוץ על כמה שטחי אחסון במקביל, זה נקרא federate queries. פונים בעזרת כמה קונקטורים לכמה קטלוגים בשביל מטא דאטה שצריך.
 
 4. **Governance & Workload Management:**  
    How does Trino handle governance and workload management? Discuss resource groups, concurrency control, memory limits, access control (RBAC), and multi-tenant isolation.
 
-טרינו מנהלת resource groups, כלומר הקצאת משאבים לשאילתות, ככה נפטרים מבעיית הnoisy neighbours כששאילתה לוקחת יותר מדיי משאבים וזה בא על חשבון שאר השאילתות.
+טרינו מנהלת resource groups, כלומר הקצאת משאבים לשאילתות (CPU, זיכרון, מספר כתיבות במקביל) , ככה נפטרים מבעיית הnoisy neighbours כששאילתה לוקחת יותר מדיי משאבים וזה בא על חשבון שאר השאילתות.
 הטרינו דואג להגביל חיבורים במקביל (להגביל חיבורים של דרייברים לtask במקביל), מגבילה את הזיכרון שמוקצה למשימה\שאילתה עם הresource groups.
+כששאילתה תבקש יותר משאבים , יכנס לתמונה האופטימיזציה, scaling out , אפשרות לשים שאילתות אחרות בqueue עד שיתפנו משאבים או במקרה הצורך לעשות kill לשאילתה, אם מדובר על שאילתות גדולות בנגיד batch processing אז יופעל FTE.
 הaccess control בטרינו מתחלק:
-אותוריזציה נעשית ע"י קרברוס\LDAP .
+אותוריזציה יכולה להעשות ע"י קרברוס\LDAP או גם בשיטות JWT/ קובץ Passwords וכו..
 אפשר לעשות אימפלמינטציה לכמה מערכות access contro במקביל ומחולקות ל:
 - allow-all : כל הפעולות מורשות
 - read-only : רק פעולות שדורשות קריאה מהמטא-דאטה
@@ -103,9 +104,9 @@ Answer these questions to cover Trino’s major architectural and operational co
    How does Trino optimize query performance? Explain cost-based optimization, statistics usage, join strategies, predicate pushdown, partition pruning, spilling, and caching behavior.
 
 אופטימיזציה לסביבת טרינו:
-עושים scale out ודואגים ליחס תקין בין CPU וזיכרון לworkers
+עושים scale out ודואגים ליחס תקין בין CPU וזיכרון לworkers ( בדרכ 70% מCPU של worker ו30% מזיכרון של worker בשביל שאילתה). ובקורדינטור 32GB זיכרון ו8-16V לCPU בשביל קלאסטר קטן יותר ו64-128GB לזיכרון ו32V לCPU בקלאסטרים גדולים יותר. 
 בעזרת caching ובעזרת שמירת matirialized views (שמירה של התוצאות של queries).
-לטרינו יש cost-based optimization שדואג לעשות תכנון DAG באופן דינאמי, כלומר הוא מתכנן את מבנה המשימות הכי טוב בהתאם למה הכי "זול".
+לטרינו יש cost-based optimization שדואג לעשות תכנון DAG באופן דינאמי, כלומר הוא מתכנן את מבנה המשימות הכי טוב בהתאם למה הכי "זול" זה נעשה אוטומאטית ע"י טרינו, אם אין סטטיסטיקות הלקוח יכול ידנית לקבוע סוג JOIN, להשתמש בadaptive joins שתוך כדי ריצה מתייחסים לגודל הטבלאות בשביל הJOINS.
 הוא עושה שימוש בסטטיסטיקות , שזה הסטטיסטיקה שרשומה בקבצים עצמם, לפיהם הוא מחשב כמה יעיל כל תכנון יהיה.
 דבר נוסף אליו הוא מתייחס זה הjoin strategies זה מתחלק ל:
 - הdistributed join : לפי פרטישן מסויים עושים ביזור לטבלאות על גבי הnodes, כלומר כל node יקבל חלק מהטבלה המלאה לפי קריטריון מסויים עליו יעשו JOIN.
@@ -152,14 +153,14 @@ Answer these questions to cover Trino’s major architectural and operational co
   טרינו gateway תומך בUI pages הבאים : dashboard, cluster, resource group, selector, history, history, routing-rules .
   
    מצבי שאילתה בUI:
-  QUEUED - מחכה לרוץ
-  PLANNED - בתכנון
-  STARTING - מתחילה הרצה
-  RUNNING - יש משימה שרצה
-  BLOCKED - מחכה למשאבים
-  FINISHING - בתהליכי סיום
-  FINISHED - הסתיים
-  FAILED - נכשל
+  QUEUED - מחכה לרוץ, נמצא בתור ויש שאילתות אחרות שרצות
+  PLANNED - בתכנון, השאילתה עושה תכנון דינאמי של מה המסלול בניית שאילתה הכי זול
+  STARTING - מתחילה הרצה, השאילתה בתהליכי בנייה ופה קורה הקצאת משאבים כמו CPU
+  RUNNING - יש משימה שרצה, כלומר משימה אחת או יותר פועלת על השאילתה.
+  BLOCKED - מחכה למשאבים, כלומר אין מספיק זיכרון או יחידת עיבוד פנויה
+  FINISHING - בתהליכי סיום, ביצוע השאילתה הסתיים ומעבירים את התוצאה ללקוח
+  FINISHED - הסתיים, הלקוח קיבל את התוצאה והשאילתה בוצעה
+  FAILED - נכשל, הייתה בעיה בשאילתה (סינטקס וכו) או בעייה בהרצה
 ---
 
 ### 🔄 Alternatives
@@ -178,21 +179,21 @@ Assignment: Based on your research and understanding of the department's pipelin
 - Data Flow: Map out the data flow and explain how this tool integrates with other components in the Data Pipeline.
 ---
 ********************* שאלות סקילה ********************************************************8
-1. איזה דיאלקט SQL משתמשים ? ANSI SQL.
+1. איזה דיאלקט SQL משתמשים ? ANSI 92 SQL.
 2. איזה קליינטים עובדים עם טרינו? דרייברים (JDBC), טרינו CLI , הpython client , node.js.
 3. השם של הרכיב בקורדינטור שמדבר עם הworkers? הdiscovery service
-4. מה זה אופרטור? כמו בc++, סימן שעושה פעולה (consumer / producer ).
+4. מה זה אופרטור? אופרטורים של פעולות בסיסיות, עושה consuming/ producing על התוצאות, כלומר JOIN, COUNT וכו..
 5. מה זה serDe ואיך זה בעייתי עם views ? זה מה שעושה תרגום מהאחסון ממש לmap reduce (לבינארי).
-6. הbroadcast Join : במקום שכל worker ישמור את הbuild side של החלק שלו בלבד, הם שולחים את החלק שלהם לכל שאר העובדים. זה טוב כדי להימנע מdistributed join וכשאין פרטישנים או באקטים. ורק כשהטבלה בbuild side קטנה.
-7. מהו מנגנון לכשל worker (הfault tolerance execution) ? הFTE הוא מנגנון לכשל, ברגע ששאילתה או משימה קורסים אפשר להריץ אותם שוב, הFTE דואג שיעשו spooling (כלומר ישמרו מידע ביניים על הדיסק) כדי שלא יצטרכו להריץ את הכל מחדש.
+6. הbroadcast Join : במקום שכל worker ישמור את הbuild side של החלק שלו בלבד ( זה הצד של הטבלה שנטען לזיכרון ויוצר טבלת hash), הם שולחים את החלק שלהם לכל שאר העובדים. זה טוב כדי להימנע מdistributed join וכשאין פרטישנים או באקטים. ורק כשהטבלה בbuild side קטנה.
+7. מהו מנגנון לכשל worker (הfault tolerance execution) ? הFTE הוא מנגנון לכשל, ברגע ששאילתה או משימה קורסים אפשר להריץ אותם שוב, הFTE דואג שיעשו spooling (כלומר ישמרו מידע ביניים על הדיסק) כדי שלא יצטרכו להריץ את הכל מחדש. הspooling מתוכנן בניגוד לspill to disk שנעשה כשלא נוותרה ברירה וחייבים להימנע בOOM crash בו רושמים מידע אקססיבי לדיסק כי לא נותר מקום.
 8. איך מגדירים קטלוג? בעזרת SQL: עושים CREATE CATALOG XXX USING connectorXXX... או בעזרת התיקייה /etc/catalog/xxx.properties . מגדירים סטטי או דינאמי.
 9. למה הquery מתפרק? לdistributed query plan שזה הlogical plan (איך הquery ירוץ) והinterconnected stages שזה האימפלמינטציה הפיזית של זה על הרכיבים שמבצעים את הDAG, סדרה של stages מחוברים על כל worker. 
 
 ************************* שאלות סקילה 2 **********************************
-1. מה עוד מקביצים בresource groups חוץ מCPU וmemory? מספר השאילתות שיכולות להתקבל במקביל.
+1. מה עוד מקביצים בresource groups חוץ מCPU וmemory? מספר השאילתות שיכולות להתקבל במקביל, חריגה מזה יכולה להתבטא בcontext switching וqueuing.
 2. באיזה קובץ קונפיגורציות מגדירים acl? בקובץ /etc/access-control.properties?
 3. איזה אחוז memory מוקצה לJVM? בערך 70% מהheap של node.
-4. איזה עוד סוגי caching יש? חוץ מהשמירת קבצים הלוקלית שיש, יש spooling protocol שעל גבי object storage יש שמירה של תוצאות של שאילתות באחסון.
+4. איזה עוד סוגי caching יש? חוץ מהשמירת קבצים הלוקלית שיש, יש spooling protocol שעל גבי object storage יש שמירה של תוצאות של שאילתות באחסון. בנוסף יש קונקטורים כמו iceberg connector בהם אפשר לעשות caching למטא דאטה לזיכרון של הקורדינטור.
 5. מה רואים בדשבורד? סטטיסטיקות - גרסה, רשימת nodes פעילים, שאילתות פעילות וכו..
 6. מה ההבדל בין ANALYZE לEXPLAIN לEXPLAIN ANALYZE? הEXPLAIN היא פקודה שמראה את התכונים הלוגי לשאילתה והעלות שלהם, ANALYZE מראה את הסטטיסטיקות לפיהן חישבו עלויות כמו כמות שורות עמודות וכו..., EXPLAIN ANALYZE מבצעת את השאילתה ומביאה ממש את התכנון הלוגי שנעשה עם העלות שלו והסטטיסטיקות מהביצוע.
 7. איך משנים את הjoin strategy? בעזרת SET SESSION join_distribution_type משנים לbroadcast או כל סוג אחר.
@@ -200,9 +201,10 @@ Assignment: Based on your research and understanding of the department's pipelin
 9. איך מונעים ספאם של שאילתות?  הגבלת פעמים ששאילתה יכולה לרוץ, והגבלת זיכרון לשאילתות.
 10. מה ההבדל בין שאילתה finishing / abondend ? שאילתה finishing היא שאילתה שמסתיימת (המשימות נסגרו והתשובה מוחזרת ללקוח), שאילתה abondend היא שאילתה שבה לא היה תקשורת עם הלקוח מעבר לtimeout מוגדר.
 11. איך יודעים שהאופטימיזציה עבדה בטרינו? עושים EXPLAIN ANALYZE , יראה גם את כל התכנונים הלוגים וגם את מה שבוצע בפועל בשאילתה.
-12. איך מחליפים איזה קלאסטר הוא אקטיב?
+12. איך יודעים לנווט לקלאסטר הנכון במקרה ויש כמה אקטיבים? זה ילך או לקלאסטר הכי פחות עמוס, או לפי שיטת RR, הload balancer דואג לנווט את השאילתה לקלאסטר המתאים מבחינת עומס.
 13. למה הטרינו לא מחליף רגל אוטומאטית? טרינו לא מחליף רגל אוטומאטית כי הוא עובד לפי הresource groups ולפי החוקים וטאגים שיש על הבקשות ולכן כשקלאסטר מסומן כUNHEALTHY טרינו לא בהכרח יעביר את השאילתות לקלאסטר אחר בריא כי הסינון לא מתבצע לפי זה.
 14. מה שני סוגי הFTE ומה היתרונות וחסרונות שלהם? יש שני סוגי retry, אחת לשאילה שמריצים אותה במקרה שהייתה תקלה על worker node, מומלץ כשהשאילתות קטנות יחסית היתרון של זה זה הרצה מהירה יחסית לשאילתות קטנות אבל אם הן גדולות מדיי זה latency ובכללי לחזור על תהליך יחסית ארוך, ויש task retry שמריץ רק משימה ספציפית אחת שנכשלה, מומלץ כשיש שאילתות גדולות או עיבוד מסגנון batch היתרון הוא שהretry יהיה מהיר יותר ולא דורש את כל התהליך עם המשאבים והתעבורה מחדש, החיסרון הוא שאם השאילתות קטנות ועושים הרבה retry task זה יכול לגרום לhigh latency שיקח יותר זמן מהרצת כל השאילתה.
+בנוסף יש exchange service שעושה spooling למידע ביניים למקרה שיהיה fault לעובד מסויים, זה מנוהל ע"י הexchange manager.
 ## Wrapping Up :trophy:
 Go over your answers with your mentor and clarify any uncertainties. Relate Trino concepts back to the broader data platform and how distributed query engines interact with storage systems and processing frameworks.
 

@@ -23,6 +23,37 @@ Think through the following questions; by answering them you’ll touch every ma
 
 1. **Spark Architecture & Execution:** what are the main components of spark? what is the role of each component? what are their roles? what is the difference between a transformation and an action? how does spark achieve fault tolerance? what is lazy execution in spark? go over [this](assets/where_do_i_run.py) and for each line, comment where it runs.
 
+ספארק הוא מנוע לעיבוד נתונים במקביל על קלאסטרים שמאפשר לעשות עיבוד מסוג טעינת נתונים, שאילתות SQL, ועד לML ולstream processing, והכל בצורה אחידה עם סט אחיד של API'S.
+ספאר הוא פרוייקט open source שבנוי על בפריות סטנדריות בשילוב עם ספריות שנכתבו ע"י צד שלישי והן כוללות ספריות לנתונים מובנים (spark SQL), ללמידת מכונה (MLlib9) , לאנליטיקות גרפים (graphX) ועוד.
+ספארק התחיל כשרצו למצוא מענה לבעיית ביצועים של map reduce בגלל הצורה בה מעבדים נתונים בה, בעיקר בML, כל פעם שהיו צריכים להריץ אלגוריתם על הנתונים זה היה נחשב job חדש שיטעון את הנתונים מ0 וירשום אותם לדיסק שוב כל פעם  מה שהיה מכביד מאוד על המערכת ואיטי.
+ספארק מנהלת ומתאמת משימות שמבוזרות על שרתים שונים.
+ספארק בנוי מקלאסטר המנוהל ע"י הcluster manager שהוא יכול להיות הspark cluster manager או להיות מנוהל ע"י YARN/קוברניטיס.
+הספארק מריץ spark application שהוא בעצם job או רצף של jobs שצריכים לרוץ בסדרה או במקביל שמכיל בו את הdriver process ואת הexecution processes.
+הdriver process מריץ את הפונקציית main() ויושב על node מסויים בקלאסטר והוא אחראי על:
+- לשמור את כל המידע על הspark application הנוכחי (מצב הapplication - רץ, הסתיים וכו, מצב הexecutore, וכו).
+- להחזיר תשובות ללקוח.
+- לנתח את העבודה, לבזר ולתאם אותה על גבי הexecutors. הוא יוצר את הlineage, logical/physical plan ומתרגם את הקוד לקוח למשימות.
+- יוצר את הspark session שיוצר dataFrames, RDD, ואת כל הפעולות שהזכרנו קודם. 
+הexecutors מבצעים את העבודה שהdriver נותן להם ומדווחים על מצבם לdriver. כל אחד מהם בהאדופ רץ על קונטיינר של YARN.
+הcluster manager אחראי לספק משאבים לdriver שמחלק אותם לexecutors.
+הdataFrames:
+זה structured API שבונה פשוט טבלאות שיכולות להיות פרוסות על כמה מחשבים.
+פרטישנים:
+הפרטישנים בשילוב מספר הexecutors יקבעו כמה משימות יכולות לרוץ במקביל.
+הtransformations:
+הdataFrames בספארק הם immutable, לכן כשרוצים לעשות עליהם פעולות בעצם יוצרים dataFrames חדשים בעזרת טרנספורמציות, הן מתחלקות ל-2:
+הnarrow - כל פרטישן עובר טרנספורמציה לפרטישן חדש. נשמר על הזיכרון.
+הwide - כל פרטישן עובר טרנספורמציה ומופץ לכמה פרטישנים. נשמר על הדיסק.
+הטרנספורציות יוצרים בעצם מה שנקרא lazy evolution:
+בספארק כשיוצרים טרנספורמציה, בעצם יוצרים תוכנית אבל התוכנית הזאת לא מבוצעת עד הרגע האחרון מה שמאפשר לעשות אופטימיזציה לכל הpipeline שיצרנו ולעשות predicate pushdown נגיד.
+הaction:
+הטרנספורמציות הן בנייה של תוכנית לוגית מסויימת על הdataFrames אבל הaction הוא הטריגר שגורם להם לקרות, לדוגמה count.
+יש 3 סוגי actions:
+- פעולות כדי לראות נתונים בקונסול show()
+- פעולות לאיסוף נתונים count()
+- פעולות לכתיבת נתונים לdata sources כמו write.json()
+הaction יוצר job שיריץ את הטרנספורמציות בnarrow transformation ואז יעשה צבירה בwide transformation.
+
 2. **Spark Planning & Optimization:** Logical vs Physical Planning: Walk through the transition from Logical Plan to Physical Plan; What is the fundamental difference between Rule-Based (RBO) and Cost-Based Optimization (CBO), what are the common kinds of optimizations used? What is the AQE? Why is running ANALYZE TABLE recommended for performant CBO? and what is whole-stage code generation?
 
 3. **Spark Shuffle & Joins:** Compare the different kind of joins, and when will spark use each? how can we tell spark to prefer one over the other? what is join reordering? and why is "broadcasting" considered a high-risk, high-reward optimization? What is a _Narrow_ transformation, and _Wide_ transformation? Why do some operations require shuffle? what exactly is written in shuffle?

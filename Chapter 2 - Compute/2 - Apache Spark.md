@@ -173,6 +173,8 @@ Discuss your answers and any areas of confusion with your mentor. Reflect on how
 
 ## Additional Topics from Review
 - A deep dive into spark internals: what are other optimizations that are implemented in spark? what is java off-heap memory? how does spark's memory allocation work?
+
+  הoff heap הוא זיכרון שלא שמור בהיפ לדוגמה code cache שהJIT משתמש בו, מטא ספייס, סטאקים של threads וכו.
 - What are other well known processing frameworks? what are the use cases spark meets? when should I NOT use spark?
 
 ## Action Items

@@ -102,12 +102,41 @@ Think through the following questions; by answering them you’ll touch every ma
 
 4. **Tungsten & Resources in Spark:** What is an RDD? Why did Spark move away from RDDs in favor of DataFrames/Datasets? Explain how Tungsten uses off-heap memory to avoid Garbage Collection pauses. Why is it a bad idea to give one executor a lot of resources (the "Fat Executor" problem)? What is the difference between Execution/Storage memory and the overhead memory? What happens when a task exceeds its allotted execution memory?
 
-הRDD הוא אוסף נתונים המבוזרים בקלאסטר.
-ספארק עברו מהRDDS לdataFrames כי הוא לא מבין את הדאטה, בניגוד אליהם הRDD לא מזהה סכמות ואין לו את הcatalyst והtungsten.
+הRDD הוא אוסף נתונים המבוזרים בקלאסטר. (resilient distributed dataset).
+הRDD הוא immutable , כלומר על כל פעולה עליו הנתונים בRDD לא משתנים אלא נוצר RDD חדש, והוא resilient כי בזכות הlineage אפשר לשחזר את שרשרת הטרנספורמציות ולחדש את הRDD על node.
+ספארק עברו מהRDDS לdataFrames כי הוא לא מבין את הדאטה, בניגוד אליהם הRDD לא מזהה סכמות ואין לו את הcatalyst והtungsten בצורה המתקדמת שיש להם.
 בניגוד אליהם RDD מייצג נתונים גם בצורה לא מובנית לחלוטין, כלומר אין פורמט סכמתי כלשהו.
-דאטה סט - קולקשן של דאטה מטייפ מסויים, מעולה לETLים והרבה טרנספורמציות. דאטה פריים - דאטה סט בו הטייפ הוא שורות (לא יודעים מה הסכמה
+דאטה סט - קולקשן של דאטה מטייפ מסויים, מעולה לETLים והרבה טרנספורמציות. דאטה פריים - דאטה סט בו הטייפ הוא שורות.
+לפני מנוע הtungsten כל מידע היה נשמר כאובייקט ג'אבה, הדבר הזה גרם גם לoverhead וגם למלא אובייקטים קטנים שגורמים לgarbage collection pauses מרובות. הtungsten פותר את זה בכך שעובד על memory management ופרומט בינארי.
+במקום אובייקטים של ג'אבה, מידע נשמר בפורמט שורות בינארי והוא נשמר בoff-heap memory כלומר אינו מנוהל ע"י JVM ואין garbage collector, אז הוא מנוהל ידנית או בעזרת ספריות. זה גם מתפטר מה gc pauses וגם נותן caching רחב יותר.
+במקרה שלאקסקיוטור יש הרבה מאוד משאבים ביחס למשאבחם על הקודקוד (fat executor) זה מאפשר מקביליות ברמת הtask ולוקליות ומפחית תעבורה אבל איבוד של fat executor יעלה הרבה יותר ויוצר אפשרות למשאבים מבוזבזים.
+באופן דומה יש thin executors שהם מנצלים משאבים קטנים יותר ממה שיש לnode להציע, פה יש fault tolerance יותר טוב אבל יותר תעבורה.
+במצב האופטימלי בnode משאירים Core ו GB אחד לOS, משאירים משאבים לapplication master (YARN) ובערך 3-5 cores לexecutor.
+סוגי זיכרון:
+- הexecution memory : נתונים שנשמרים הקשורים לפעולות כמו שאפל, JOIN וכו.. שומר דאטה לטווח קצר כמו תוצאות ביניים.
+- הstorage memory : דאטה פנימי שנשמר בקלאסטר בקאשינג לדוגמה. שומר דאטה לטווח ארוך.
+- הoverhead memory : מידע שנשמר off-heap לפעולות של המערכת וnetwork buffer. כגון serialization.
+אם הexecution memory אוזל אפשר "לגנוב" מהstorage memory עד threshold מסויים ואז כבר נקבל OOM error. 
+
+
 
 5. **Spark Skew, Partitioning & Caching:** What is data skew? how can it be solved? what is the difference between `repartition(n)` and `coalesce(n)`? What are the spark `StorageLevel`s? what is the difference between `cache` and `persist`? why are udf's (expecially in python) bad? how does spark solve the serde bottleneck with udf's?
+
+הdata skew הוא מקרה בו taskים מסויימים מעבדים משמעותית יותר מידע מאחרים ולוקחים יותר זמן בגלל שהpartitions לא סימטריים בכלל, בחלקם יש הרבה יותר מידע מבאחרים. מה שיכול ליצור bottlenecks / OOM בexecutors מסויימים. בשביל זה עושים בAQE שבזמן ריצה מזהה פרטישנים גדולים מדיי, מחלקת אותם לsub-tasks. או לעשות salting שבו מוצאים את הkeys שגורמים לskew ומוסיפים להם INTEGER כלשהו, ככה הם מתפזרים בין פרטישנים במקום להיות באותו אחד. בטבלה השנייה אנחנו נצרף את הkeys לכל הsalts האפשריים כדי שהJOIN לא ישבר.
+הrepartition()- עושה שינוי במספר הפרטישנים בdataFrame מסויים, קורא לשאפל מלא. נשתמש כשמגדילים דרסטית את כמות הפרטישנים לפני עיבוד גדול או פעולה גדולה.
+הcoalesce()- מורידה את מספר הפרטישנים בכך שממרג'ג'ת פרטישנים בלי לקרוא לשאפל מלא. נעשה לפני ששומרים dataFrame כדי להקטין את הoutput files.
+הstorage levels הם הדגלים לניהול אחסון של RDDים בעת שעושים persist().
+זה כולל memory_only (שמירה לזיכרון בלבד) שומר את המידע deserialized , גישה מהירה יותר אבל לוקח יותר אחסון.
+הmemory_only_ser שומר לזיכרון בserialized.
+הmemory_and_disk שומר גם לזיכרון וגם לדיסק. את הפרטישנים שלא נכנסים בזיכרון שומר בדיסק ואת השאר בזיכרון.
+הmemory_and_disk_ser כמו הקודם רק serialized.
+הdisk_only שומר רק לדיסק.
+הoff_heap דיי ברור מאליו , לדאטה סטס שגדולים מדיי בשביל להישמר בהיפ.
+זה נעשה בפעולה של persist ולא cache כי בניגוד לפרסיסט cache שומרת אוטומאטית לmemory_and_disk בשביל דאטה סטס\פריימס וmemory_only לRDDים ואם הRDD לא נכנס בזזיכרון הוא ישמור את כל הפרטישנים שהוא יכול ואת השאר יחשב כל פעם.
+הUDF בספארק הוא user defined functions, שזה איזשהו לוגיקה שאפשר להגדיר ולשים על datasets. יוצרים פונקציות שמקבלות פרמטר ומחזירות ערך.
+בעבודה עם דאטה סטס גדולים זה יכול לגרום לאיטיות, או לOOM אם יוצרים הרבה אובייקטים, לכן מומלץ להשתמש בvectorized UDF.
+הבעיה בUDFים שהם לא נגישים לcatalyst וזה מבטל את האופטימיזציה שלו ובpyspark הכל חייב לעבוד serialization/deserialization והוא עובר את זה בפרוסס אחר שם הוא מורץ, מה שיוצר overhead.
+בשביל זה יש את הpandas UDF שמשתמשים בarrow ומעבירים את המידע בעמודות במקום שורה שורה. או כתיבה בג'אבה תפתור את זה.
 
 
 ### Real-World Context
@@ -121,13 +150,24 @@ Assignment: You are required to research and write a comparative analysis betwee
     Focus: Compare performance, architecture, and specific "pain points" this tool solves compared to legacy systems or competitors.
     Goal: You must be able to justify why the department uses this tool for our specific environment.
 ספארק הוא יותר לbig data processing וטרינו מתמקד יותר בשאילתות SQL מהירות. ספארק הרבה יותר כבד חישובית בגלל הטרנספורמציות. הוא מתאים יותר לETL וstreaming/batch וטרינו הרבה יותר לad-hoc.
+הapache storm הוא גם מנוע עיבוד שנועד לעבד כמויות ענק של נתונים שמגיעים בקצב מהיר באופן רציף ולאורך זמן. הרבה יותר טוב לreal time ויש לו low latency, אין לו ניהול משאבים טוב, הוא צורך הרבה זיכרון וCPU והוא מסובך יותר להקמה.
+
 ## 🎯 User Story & Scenario
 
 Assignment: Based on your research and understanding of the department's pipeline, define a concrete Use Case for this technology.
 
     Deliverable: A written summary example/story (two sentences approx.).
     Requirement: Describe a real-world scenario (e.g., a specific client requirement) where this technology is the optimal solution.
-
+********************************** שאלות סקילה *************************
+1. איך קוראים לnarrow transformation ולaction בהיררכיה? narrow dependencies וeager operations.
+2. מה הפקודה לכתוב בדיסק? persist(storageLevel.disk_only) / persist(storageLevel.memory_and_disk)
+3. האם עושים predicate pushdown לכל סוגי הקבצים? בטרינו לא, צריך פורמט עמודות, בספארק כן (רק בגרסה 3) כי צריך רק סטטיסטיקות.
+4. האם יש אופטימיזציות בRDD ? יש repartition וcoalesce אבל אין את הcatalyst/tungsten או בכללי שום RBO כי אין סכמה בRDD.
+5. איך פרטישנים מחולקים בין executors ? יש בין 2-3 פרטישנים פר CORE ובממוצע executor על 5 CORES אז יש בערך 10-15 פרטישנים פר executor. החלקוה תיעשה בדרך כלל לnodes שעליהם הנתונים שמורים באחסון.
+6. איך משחקים עם המשאבים שיש לכל executor? אפשר לאפשר הקצאה דינאמית בעזרת spark.conf.set("spark.dynamicAllocation.enabled", "true") ואפשר ידנית לעשות requestTotalExecutors.
+7. איך הbroadcast hash join באמת עוזר? הברואדקאסט מחליף שאפל שזה תהליך מאוד יקר והשליחה של הטבלה הקטנה לכל הexecutors מונעת data skew, הjoin עדיין נעשה באופן לוקלי.
+8. איך הhashing עוזר פה? חיפוש בO(1).
+9. למה להשתמש בספארק ולא טרינו? ברגע שהעיבוד שלנו כולל כמה טרנספורמציות על טבלה ספארק הוא הבחירה הכי טובה, בטרינו או בכלים אחרים נצטרך לעשות טרנספורמציה , לשמור תוצאה סופית ולחזור על התהליך, כל זה כרוך בoverhead, הרבה תקשורת בין workers והרבה כתיבות לדיסק. לעומת זאת בספארק היכולת לכתוב pipeline שלם ולבצע אוותו רק בפעולה סופית נותן לנו להימנע מהדברים האלו. אנחנו יוצרים lineage שבעזרתו גם אפשר לשחזר נתונים וספארק גם מציע אופטימיזציות הרבה יותר מתקדמות מטרינו למקרים האלו (tungsten לדוגמה) ומציע caching של התוצאות כדי להימנע מלחזור על עצמנו. לעומת זאת לעיבוד real time ולשאילתות איטרטיביות קצרות שבהן צריך שליפה קצרה התהליך של טרינו הרבה יותר טוב כי התהליך של ספארק "מכביד" יותר ממה שהוא תורם ויוצר Overhead מאשר ביצוע השאילתה בטרינו. טרינו בנוי להתפקס על שאילתת SQL אחת וספארק על כמויות גדולות של מידע מבוזר. נעדיף גם לא להשתמש בספארק כשאין לנו מספיק משאבי זיכרון. 
 ## Wrapping Up :trophy:
 Discuss your answers and any areas of confusion with your mentor. Reflect on how these general concepts will help when you later write code and help clients.
 

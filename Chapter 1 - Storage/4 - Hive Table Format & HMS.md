@@ -61,7 +61,7 @@ Answer the following questions to explore the metastore:
 
 איך apache/trino מתקשרים עם hive?
 הם פונים לconnector שלהם או ישירות לmetastore (בדרך כלל טרינו ישירות וספארק ישירות).
-אם הפנייה היא ישירות אז היא לא עוברת דרך hiveserver2 אלא רק דרך הthrift api and protocol , הhive server מתרגם בקשת SQL לRPC והפרוטוקול thrift מקודד אותה ושולח אותה לmetastore.
+אם הפנייה היא ישירות אז היא לא עוברת דרך hiveserver2 אלא רק דרך הthrift api and protocol , הhive server מתרגם בקשת SQL לRPC ומקוד אותה ודרך פרוטוקול thrift לmetastore.
 הmetastore יפנה לדאטה בייס ויחפש את המידע הנדרש אותו הוא יחזיר גם בבקשת RPC.
 בעת גישה דרך HS2 אז נשלח שם משתמש וסיסמה בדרך כלל והHS2 מבצע גם אותנטיקציה, הJDBC ימיר את הבקשה לRPC וישתמש בפרוטוקול thrift.
 הHS2 הוא זה שיעדכן את הmetastore.

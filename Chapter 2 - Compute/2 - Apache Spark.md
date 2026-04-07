@@ -33,7 +33,7 @@ Think through the following questions; by answering them you’ll touch every ma
 - לשמור את כל המידע על הspark application הנוכחי (מצב הapplication - רץ, הסתיים וכו, מצב הexecutore, וכו).
 - להחזיר תשובות ללקוח.
 - לנתח את העבודה, לבזר ולתאם אותה על גבי הexecutors. הוא יוצר את הlineage, logical/physical plan ומתרגם את הקוד לקוח למשימות.
-- יוצר את הspark session שיוצר dataFrames, RDD, ואת כל הפעולות שהזכרנו קודם. sparkcontext הוא הלגסי של זה שהיה רק Low-level API שעשה תכנון דינמי ותיאום משימות אבל לא השתמש באופטימיזציות כמו catalyst ולא היה מאוחד לכל השפות (היה צריך גם SQL CONTEXT). 
+- יוצר את הspark session שיוצר dataFrames, RDD, ואת כל הפעולות שהזכרנו קודם. sparkcontext הוא הגרסה הישנה שלו שאפשר לapplication להתחבר לקלאסטר דרך הresource manager וזה שהיה רק Low-level API שעשה תכנון דינמי ותיאום משימות אבל לא השתמש באופטימיזציות כמו catalyst ולא היה מאוחד לכל השפות (היה צריך גם SQL CONTEXT). 
 הexecutors מבצעים את העבודה שהdriver נותן להם ומדווחים על מצבם לdriver. כל אחד מהם בהאדופ רץ על קונטיינר של YARN.
 הcluster manager אחראי לספק משאבים לdriver שמחלק אותם לexecutors.
 הdataFrames:

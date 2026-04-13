@@ -331,7 +331,17 @@ pytest also provides fixtures which is defined, reliable context for the test th
 
 \---
 
-
+****************** skilla questions ************************
+1. top-down and bottom-up : bottom-up means that you work on the smaller problems first and then integrate them' which gives you reusability of smaller components. top-down approach means you break the problem to bigger components and then you refine them to smaller ones, which is more simplifying and easier to implement.
+2. the names of alternatives for TDD : Acceptance test-driven development (ATDD), behavior-driven development (BDD), example-driven development (EDD) and story test-driven development (SDD).
+3. throw early catch later : a method where ou throw the exceptions as early as you find them and catch them in a later stage of the code, that can improve code readability and seperates error handling from the regular code flow.
+4. .pyc file : the python code "compiled" into bytecde (by an interpenter, not actually compilation by a compiler).
+5. tools that existed before git : cvs - centralized architecture , a single repository server where all changes were stored, compared to git it had weak branching and merging. svs - cvs with better branching and some other improvements. both cvs and svs are a single point of failure. clearcase - very strong but was very complicated.
+6. why not pass boolean as a parameter : it goes against the single responsibility principle in SOLID since it has now more than one focus.
+7. cherry git : a commend that allows to choose certain commits by reference to push to the head, can be used when a commit is done to the wrong branch.
+8. what is fastAPI based on : python's type hints.
+9. use a ds for the parameters if possible, split the function to multiple responsibilities and seperate the parameters. change the implementation.
+10. how is git good for collaborative work : git allows prs, crs etc..., it allows users to change data and make progress simultaneously. when most of the files are non-shared and only some of them are or when we need to monitor work and not have immediate option to update data.
 
 \### 🔄 Alternatives
 

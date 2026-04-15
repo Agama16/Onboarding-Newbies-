@@ -122,6 +122,7 @@ SOLID stands for:
 
 - Liskov substitution principle :
   every sub-class or derived class should be able to subtitute their parent class, meaning that an object from a sub-class should satisfy the conditions in a parent-class code.
+  an example is a class of rectangles being subtitud by a class of squares, the square will inherit all of the rectangle's attributes, even hight and width but it only needs one of them since thry are similar. both the square and the rectangle should inherit from a more basic group. 
 
 - Interface Segregation Principle :
   a client shouldn't be forced to implement an interface or method that isn't needed by them. That means methods/interfaces shouldn't be dependent on other methods or interfaces that aren't necessarily needed in the same cases - avoiding unneeded object creation/ code running.
@@ -129,6 +130,8 @@ SOLID stands for:
 - Dependency Inversion Principle :
   high level modules should not rely on low level ones, but on abstractions instead.
   that means that a dependency on a low level module should be broken down to if needed multiple dependencies. that makes it easier to implement the open-closed principle and makes the code more flexible and collaborative.
+  higher level modules relying on lower level ones creates tight coupling that prevents reusing the module.
+  lets say we have a class for building a house, and a class of bricks, we wont do action from the actual bricks class but we'll use a worker class that can do that, that way a worker can use the bricks class or other actions and the class is reusable.
 
 all 5 of the SOLID principles make sure that the code is easy to work with, comfortable to change and effective for the client.
 
@@ -261,7 +264,7 @@ procedure execution is commonly used in programs where there arent any events th
 &#x20;  Discuss readability, ecosystem, and runtime behavior.
 
 python is a high lvel programming language that is known for being easy to write and read. the language is very flexible (for beig dynamically typed) and therefore very easy to use and understand.
-python is object oriented and interpented.
+python is object oriented and hybrid (both compiled and interpented) even though it is mostly interpented. the compilation or interpentation depends . python could be interpented straight from the original code or it could be compiled to bytecode and then the bytecode is interpented (Cpython). so the engine takes a place.
 python can integrate with many third party libraries such as numpy, pandas, igraph for algorithms, matplotlib for vizualization, sqlalchemy for sql db and more.
 the code is parsed and analyzed in run-time line by line.
 
@@ -275,7 +278,7 @@ a request is being sent to the endpoint URL of the server, and a response is bei
 it's technically just a set of protocols that map the REST operations to CRUD operations.
 usually a response would be a resource representation (most likely HTML page), and from that links ould be followed to make the state change and give more pages as responses.
 the client and server are loosly coupled, meaning that only the first identifier is needed and the rest would be discovered without the client knowing.
-REST API is stateless, meaning that when the client is not active it doesn't consume any resourcess from the server.
+REST API is stateless, meaning that when the client sends a requests it needs to include all of the relevent info about it's state because the REST API doesn't remember it.
 
 
 
@@ -339,7 +342,7 @@ pytest also provides fixtures which is defined, reliable context for the test th
 5. tools that existed before git : cvs - centralized architecture , a single repository server where all changes were stored, compared to git it had weak branching and merging. svs - cvs with better branching and some other improvements. both cvs and svs are a single point of failure. clearcase - very strong but was very complicated.
 6. why not pass boolean as a parameter : it goes against the single responsibility principle in SOLID since it has now more than one focus.
 7. cherry git : a commend that allows to choose certain commits by reference to push to the head, can be used when a commit is done to the wrong branch.
-8. what is fastAPI based on : python's type hints.
+8. what is fastAPI based on : python's pydantic that uses type hints. pydantic does data validatio by turning type hints to runtime validation rules using only one structure given. 
 9. use a ds for the parameters if possible, split the function to multiple responsibilities and seperate the parameters. change the implementation.
 10. how is git good for collaborative work : git allows prs, crs etc..., it allows users to change data and make progress simultaneously. when most of the files are non-shared and only some of them are or when we need to monitor work and not have immediate option to update data.
 

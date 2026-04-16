@@ -11,7 +11,6 @@ def test_get_menu():
     assert len(response.json()) == 3
     assert response.json()[0]["name"] == "Margherita"
 
-# create a mock test
 @patch('main.save_order_to_db')
 def test_create_order_success(mock_save_db):
 
@@ -23,7 +22,7 @@ def test_create_order_success(mock_save_db):
 
     mock_save_db.return_value = True
 
-    # make sure the wanted outcome is satisfied
+   
     response = client.post('/order', mock_order)
     assert response.status_code == 200
     
@@ -35,7 +34,7 @@ def test_create_order_fail(mock_save_db):
         "customer_name" : "john", "pizzas" : [ "none", 1.0]
     }
 
-    # create failure on purpose
+ 
     mock_save_db.return_value = False
 
     response = client.post('/order', mock_order)

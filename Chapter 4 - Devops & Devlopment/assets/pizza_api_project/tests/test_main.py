@@ -11,19 +11,6 @@ def test_get_menu():
     assert len(response.json()) == 3
     assert response.json()[0]["name"] == "Margherita"
 
-# ==========================================
-# TODO: WRITE TESTS FOR THE POST ENDPOINT
-# ==========================================
-
-# Example of what is needed:
-# @patch('main.save_order_to_db')
-# def test_create_order_success(mock_save_db):
-#     # 1. Arrange: setup mock return value and payload
-#     # 2. Act: send POST request to /orders
-#     # 3. Assert: check status code, response data, and that mock was called
-#     pass
-
-
 # create a mock test
 @patch('main.save_order_to_db')
 def test_create_order_success(mock_save_db):

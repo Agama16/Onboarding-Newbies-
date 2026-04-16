@@ -15,13 +15,12 @@ def test_get_menu():
 @patch('main.save_order_to_db')
 def test_create_order_success(mock_save_db):
 
-    # the mock order
+    
     mock_order={
         "customer_name" : "bob",
         "pizzas" : [ "Margherita", 10.0]
     }
 
-    # create success return value on purpose
     mock_save_db.return_value = True
 
     # make sure the wanted outcome is satisfied
@@ -45,8 +44,7 @@ def test_create_order_fail(mock_save_db):
 
 def test_create_order_empty_list():
 
-    """TODO: Test that sending an order with no pizzas returns a 400 error."""
-    #create an empty list order
+    
     order = OrderRequest("testOrder", [])
     response = client.post("/order", json=order)
     assert response.status_code == 400

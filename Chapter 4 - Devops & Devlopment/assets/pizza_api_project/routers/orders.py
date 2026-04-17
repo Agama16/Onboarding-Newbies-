@@ -16,10 +16,10 @@ def get_menu():
 @router.post("/orders")
 def create_order(order: OrderRequest) -> List[Dict[str, Any]]:
 
-    if len(OrderRequest.pizzas) == 0 :
+    if len(order.pizzas) == 0 :
         raise HTTPException(status=400, detail="list is empty")
     else:
-        for pizza in OrderRequest.pizzas:
+        for pizza in order.pizzas:
             total_price+=pizza.price
  
         customer_id: str =str(uuid.uuid4())  # uuid is a python unique id generator 

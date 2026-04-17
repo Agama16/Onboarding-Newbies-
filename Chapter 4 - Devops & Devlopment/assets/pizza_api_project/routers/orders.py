@@ -31,7 +31,7 @@ def create_order(order: OrderRequest) -> List[Dict[str, Any]]:
         
         if not saved :
             raise HTTPException(
-                status=400, 
+                status_code=400, 
                 detail="could not save the order, check that the order's details are valid and try again")
       
         return[

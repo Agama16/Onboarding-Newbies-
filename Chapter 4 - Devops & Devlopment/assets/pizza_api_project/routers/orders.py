@@ -21,9 +21,9 @@ def create_order(order: OrderRequest):
         for pizza in OrderRequest.pizzas:
             total_price+=pizza.price
  
-        cust_id=str(uuid.uuid4())  
+        customer_id=str(uuid.uuid4())  # uuid is a python unique id generator 
         order={
-            "customer_id" : cust_id, 
+            "customer_id" : customer_id, 
             "customer" : OrderRequest.customer_name,
             "pizzas_list" : OrderRequest.pizzas,
         }
@@ -35,6 +35,6 @@ def create_order(order: OrderRequest):
         return[
 
             {"Order saved!, total price:" : total_price},
-            { "order ID:": cust_id},
+            { "order ID:": customer_id},
         ]
 

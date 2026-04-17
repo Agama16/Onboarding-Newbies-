@@ -22,12 +22,12 @@ def create_order(order: OrderRequest) -> List[Dict[str, Any]]:
             total_price+=pizza.price
  
         customer_id: str =str(uuid.uuid4())  # uuid is a python unique id generator 
-        order: Dict[str, Any] ={
+        order_to_save: Dict[str, Any] ={
             "customer_id" : customer_id, 
-            "customer" : OrderRequest.customer_name,
-            "pizzas_list" : OrderRequest.pizzas,
+            "customer" : order.customer_name,
+            "pizzas_list" : order.pizzas,
         }
-        saved: bool = save_order_to_db(order)
+        saved: bool = save_order_to_db(order_to_save)
         
         if not saved :
             raise HTTPException(

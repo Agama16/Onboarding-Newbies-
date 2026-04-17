@@ -15,13 +15,9 @@ def get_menu():
 @router.post("/orders")
 def create_order(order: OrderRequest):
 
-
     if len(OrderRequest.pizzas) == 0 :
         raise HTTPException(status=400, detail="list is empty")
-
     else:
-
-
         for pizza in OrderRequest.pizzas:
             total_price+=pizza.price
  
@@ -31,15 +27,11 @@ def create_order(order: OrderRequest):
             "customer" : OrderRequest.customer_name,
             "pizzas_list" : OrderRequest.pizzas,
         }
-
-    
         saved = save_order_to_db(order)
 
-        
         if not saved :
             raise HTTPException(status=400, detail="order failed")
-
-        
+      
         return[
 
             {"Order saved!, total price:" : total_price},

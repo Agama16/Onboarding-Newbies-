@@ -16,13 +16,15 @@ def get_menu():
 @router.post("/orders")
 def create_order(order: OrderRequest) -> List[Dict[str, Any]]:
 
+    total_price=0
+    
     if len(order.pizzas) == 0 :
         raise HTTPException(status=400, detail="list is empty")
     else:
         for pizza in order.pizzas:
             total_price+=pizza.price
  
-        customer_id: str =str(uuid.uuid4())  # uuid is a python unique id generator 
+        customer_id: str =str(uuid4())  # uuid is a python unique id generator 
         order_to_save: Dict[str, Any] ={
             "customer_id" : customer_id, 
             "customer" : order.customer_name,

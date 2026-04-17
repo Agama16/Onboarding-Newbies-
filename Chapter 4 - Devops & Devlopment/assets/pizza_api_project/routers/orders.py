@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException 
 from db_handler.dtatabase import save_order_to_db
-import uuid
+from uuid import uuid4
 from models.pizza import OrderRequest
 router = APIRouter()
 
@@ -13,7 +13,7 @@ def get_menu():
     ]
 
 @router.post("/orders")
-def create_order(order: OrderRequest):
+def create_order(order: OrderRequest) -> List[Dict[str, Any]]:
 
     if len(OrderRequest.pizzas) == 0 :
         raise HTTPException(status=400, detail="list is empty")
@@ -21,20 +21,21 @@ def create_order(order: OrderRequest):
         for pizza in OrderRequest.pizzas:
             total_price+=pizza.price
  
-        customer_id=str(uuid.uuid4())  # uuid is a python unique id generator 
-        order={
+        customer_id: str =str(uuid.uuid4())  # uuid is a python unique id generator 
+        order: Dict[str, Any] ={
             "customer_id" : customer_id, 
             "customer" : OrderRequest.customer_name,
             "pizzas_list" : OrderRequest.pizzas,
         }
-        saved = save_order_to_db(order)
-
+        saved: bool = save_order_to_db(order)
+        
         if not saved :
-            raise HTTPException(status=400, detail="order failed")
+            raise HTTPException(
+                status=400, 
+                detail="could not save the order, check that the order's details are valid and try again")
       
         return[
-
             {"Order saved!, total price:" : total_price},
-            { "order ID:": customer_id},
+            { "Order ID:": customer_id},
         ]
 

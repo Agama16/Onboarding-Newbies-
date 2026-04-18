@@ -1,10 +1,10 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 
 class PizzaItem(BaseModel):
-    name: str
-    price: float
+    name: str = Field(..., min_length=1)
+    price: float = Field(..., gt=0)
 
 class OrderRequest(BaseModel):
-    customer_name: str
+    customer_name: str = Field(..., min_length=1)
     pizzas: List[PizzaItem]
